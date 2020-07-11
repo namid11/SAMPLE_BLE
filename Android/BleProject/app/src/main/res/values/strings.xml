@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">BleProject</string>
+    <string name="advertise">Advertise</string>
+    <string name="notify">Notify</string>
+</resources>
