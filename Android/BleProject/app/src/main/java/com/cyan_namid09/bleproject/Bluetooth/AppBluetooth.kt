@@ -17,21 +17,35 @@ class AppBluetooth(appContext: Context) {
     val manager: BluetoothManager by lazy { appContext.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager }
     private val advertiser: BluetoothLeAdvertiser by lazy { manager.adapter.bluetoothLeAdvertiser }
     private val gattServer: BluetoothGattServer by lazy { manager.openGattServer(appContext, gattServerCallback) }
-
-    init {
-        // Notifyが使えるCharacteristicを含んだServiceをServerに設定
-        gattServer.addService(BLEParams.service)
-
-        // とりま値をセット
-        BLEParams.notifyCharacteristic.value = "SAMPLE".toByteArray()
+    private val service: BluetoothGattService by lazy {
+        BluetoothGattService(UUID_SERVICE, BluetoothGattService.SERVICE_TYPE_PRIMARY).apply {
+            this.addCharacteristic(notifyCharacteristic)
+        }
     }
-
+    private val notifyCharacteristic: BluetoothGattCharacteristic by lazy {
+        BluetoothGattCharacteristic(
+            UUID_CHARACTERISTIC,
+            BluetoothGattCharacteristic.PROPERTY_READ or BluetoothGattCharacteristic.PROPERTY_WRITE or BluetoothGattCharacteristic.PROPERTY_NOTIFY,
+            BluetoothGattCharacteristic.PERMISSION_READ or BluetoothGattCharacteristic.PERMISSION_WRITE
+        ).apply {
+            this.value = "SAMPLE".toByteArray()
+            this.addDescriptor(cccd)
+        }
+    }
+    private val cccd: BluetoothGattDescriptor by lazy {
+        BluetoothGattDescriptor(UUID_CCCD, BluetoothGattDescriptor.PERMISSION_WRITE or BluetoothGattDescriptor.PERMISSION_READ).apply {
+            this.value = BluetoothGattDescriptor.DISABLE_NOTIFICATION_VALUE
+        }
+    }
     private var connectedDevice: BluetoothDevice? = null
 
     fun advertise() {
+        // Notifyが使えるCharacteristicを含んだServiceをServerに設定
+        gattServer.addService(service)
+
         advertiser.startAdvertising(
             AdvertiseSettings.Builder().build(),
-            AdvertiseData.Builder().apply { addServiceUuid(ParcelUuid(BLEParams.UUID_SERVICE)) }.build(),
+            AdvertiseData.Builder().apply { addServiceUuid(ParcelUuid(UUID_SERVICE)) }.build(),
             object : AdvertiseCallback() {
                 override fun onStartSuccess(settingsInEffect: AdvertiseSettings?) {
                     Log.d(TAG, "Start Advertising")
@@ -54,8 +68,8 @@ class AppBluetooth(appContext: Context) {
     fun notify(value: ByteArray) {
         val device = this.connectedDevice
         if (device != null) {
-            BLEParams.notifyCharacteristic.value = value
-            val notifyFlag = gattServer.notifyCharacteristicChanged(device, BLEParams.notifyCharacteristic, false)
+            notifyCharacteristic.value = value
+            val notifyFlag = gattServer.notifyCharacteristicChanged(device, notifyCharacteristic, false)
             if (notifyFlag) Log.d(TAG, "succeeded notification") else Log.e(TAG, "failed notification")
         }
     }
@@ -81,6 +95,7 @@ class AppBluetooth(appContext: Context) {
         }
         override fun onCharacteristicWriteRequest(device: BluetoothDevice?, requestId: Int, characteristic: BluetoothGattCharacteristic?, preparedWrite: Boolean, responseNeeded: Boolean, offset: Int, value: ByteArray?) {
             Log.d(TAG, "Characteristic Write Request")
+            characteristic?.value = value
             gattServer.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, offset, value)
         }
         // Descriptor
@@ -111,8 +126,7 @@ class AppBluetooth(appContext: Context) {
         lateinit var shared: AppBluetooth
 
         fun initialize(appContext: Context) {
-            shared =
-                AppBluetooth(appContext)
+            shared = AppBluetooth(appContext)
         }
     }
 }
