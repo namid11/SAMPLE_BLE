@@ -178,6 +178,10 @@ class BluetoothManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate
     }
     
     func setNotify() {
-        self.targetPeripheral?.setNotifyValue(true, for: notifyCharacteristic!)
+        if (self.notifyCharacteristic?.isNotifying == false) {
+            self.targetPeripheral?.setNotifyValue(true, for: notifyCharacteristic!)
+        } else {
+            print("the characteristic is already notifying");
+        }
     }
 }
