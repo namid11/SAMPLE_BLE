@@ -2,4 +2,6 @@
     <string name="app_name">BleProject</string>
     <string name="advertise">Advertise</string>
     <string name="notify">Notify</string>
+    <string name="disconnected">Disconnected</string>
+    <string name="now_connecting">Now Connecting ...</string>
 </resources>

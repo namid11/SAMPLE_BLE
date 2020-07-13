@@ -8,12 +8,14 @@ import android.bluetooth.le.BluetoothLeAdvertiser
 import android.content.Context
 import android.os.ParcelUuid
 import android.util.Log
+import io.reactivex.rxjava3.subjects.PublishSubject
+import io.reactivex.rxjava3.subjects.Subject
 import java.util.*
 
 
 private const val TAG = "AppBluetooth"
 
-class AppBluetooth(appContext: Context) {
+class AppBluetooth(appContext: Context, observable: Subject<String>) {
     val manager: BluetoothManager by lazy { appContext.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager }
     private val advertiser: BluetoothLeAdvertiser by lazy { manager.adapter.bluetoothLeAdvertiser }
     private val gattServer: BluetoothGattServer by lazy { manager.openGattServer(appContext, gattServerCallback) }
@@ -81,9 +83,15 @@ class AppBluetooth(appContext: Context) {
                     Log.d(TAG, "STATE CONNECTED")
                     connectedDevice = device
                 }
+                BluetoothProfile.STATE_CONNECTING -> {  // Peripheralでは呼ばれない？
+                    Log.d(TAG, "STATE CONNECTING")
+                }
                 BluetoothProfile.STATE_DISCONNECTED -> {
                     Log.d(TAG, "STATE DISCONNECTED")
                     connectedDevice = null
+                }
+                BluetoothProfile.STATE_DISCONNECTING -> {  // // Peripheralでは呼ばれない？
+                    Log.d(TAG, "STATE DISCONNECTING")
                 }
             }
         }
@@ -96,6 +104,8 @@ class AppBluetooth(appContext: Context) {
         override fun onCharacteristicWriteRequest(device: BluetoothDevice?, requestId: Int, characteristic: BluetoothGattCharacteristic?, preparedWrite: Boolean, responseNeeded: Boolean, offset: Int, value: ByteArray?) {
             Log.d(TAG, "Characteristic Write Request")
             characteristic?.value = value
+            // subjectにnextで値を流す。
+            observable.onNext(String(value ?: "".toByteArray()))
             gattServer.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, offset, value)
         }
         // Descriptor
@@ -125,8 +135,8 @@ class AppBluetooth(appContext: Context) {
     companion object {
         lateinit var shared: AppBluetooth
 
-        fun initialize(appContext: Context) {
-            shared = AppBluetooth(appContext)
+        fun initialize(appContext: Context, observable: Subject<String>) {
+            shared = AppBluetooth(appContext, observable)
         }
     }
 }
