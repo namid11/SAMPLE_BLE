@@ -39,5 +39,9 @@ class ViewController: NSViewController {
     @IBAction func writeCharacteristic(_ sender: Any) {
         self.bm.write()
     }
+    
+    @IBAction func disconnect(_ sender: Any) {
+        self.bm.disconnect()
+    }
 }
 

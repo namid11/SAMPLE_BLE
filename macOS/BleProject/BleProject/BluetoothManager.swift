@@ -174,7 +174,9 @@ class BluetoothManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate
     }
 
     func write() {
-        self.targetPeripheral?.writeValue("ABC".data(using: .utf8) ?? Data(), for: notifyCharacteristic!, type: .withResponse)
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = DateFormatter.dateFormat(fromTemplate: "yyyyMMMddHHmmss", options: 0, locale: Locale(identifier: "ja_JP"))
+        self.targetPeripheral?.writeValue(dateFormatter.string(from: Date()).data(using: .utf8) ?? Data(), for: notifyCharacteristic!, type: .withResponse)
     }
     
     func setNotify() {
@@ -183,5 +185,9 @@ class BluetoothManager: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate
         } else {
             print("the characteristic is already notifying");
         }
+    }
+    
+    func disconnect() {
+        self.cbCentralManager.cancelPeripheralConnection(self.targetPeripheral!)
     }
 }
